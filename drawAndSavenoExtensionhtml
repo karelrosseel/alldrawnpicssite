@@ -1,0 +1,445 @@
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Draw & Upload to GitHub</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #4a5568;
+            margin-bottom: 30px;
+        }
+        
+        .drawing-area {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .tools {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-width: 150px;
+        }
+        
+        .tool-group {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #e2e8f0;
+        }
+        
+        .tool-group h3 {
+            margin: 0 0 10px 0;
+            color: #2d3748;
+            font-size: 14px;
+        }
+        
+        canvas {
+            border: 3px solid #4299e1;
+            border-radius: 10px;
+            cursor: crosshair;
+            background: white;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #4299e1, #3182ce);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        input, select {
+            padding: 8px;
+            border: 2px solid #e2e8f0;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: #4299e1;
+        }
+        
+        .color-palette {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 5px;
+            margin-top: 5px;
+        }
+        
+        .color-btn {
+            width: 30px;
+            height: 30px;
+            border: 2px solid #ddd;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .color-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        .color-btn.selected {
+            border-color: #333;
+            border-width: 3px;
+        }
+        
+        .upload-section {
+            background: #f0fff4;
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #68d391;
+            margin-top: 20px;
+        }
+        
+        .github-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #2d3748;
+        }
+        
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+        }
+        
+        .status.success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+        
+        .status.error {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 1px solid #fc8181;
+        }
+        
+        .help-text {
+            font-size: 12px;
+            color: #718096;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Draw & Upload to GitHub</h1>
+        
+        <div class="drawing-area">
+            <div class="tools">
+                <div class="tool-group">
+                    <h3>🖊️ Brush Size</h3>
+                    <input type="range" id="brushSize" min="1" max="20" value="5">
+                    <span id="brushSizeDisplay">5px</span>
+                </div>
+                
+                <div class="tool-group">
+                    <h3>🎨 Colors</h3>
+                    <input type="color" id="colorPicker" value="#000000">
+                    <div class="color-palette">
+                        <div class="color-btn selected" style="background: #000000" data-color="#000000"></div>
+                        <div class="color-btn" style="background: #ff0000" data-color="#ff0000"></div>
+                        <div class="color-btn" style="background: #00ff00" data-color="#00ff00"></div>
+                        <div class="color-btn" style="background: #0000ff" data-color="#0000ff"></div>
+                        <div class="color-btn" style="background: #ffff00" data-color="#ffff00"></div>
+                        <div class="color-btn" style="background: #ff00ff" data-color="#ff00ff"></div>
+                        <div class="color-btn" style="background: #00ffff" data-color="#00ffff"></div>
+                        <div class="color-btn" style="background: #ffffff" data-color="#ffffff"></div>
+                    </div>
+                </div>
+                
+                <div class="tool-group">
+                    <h3>🛠️ Tools</h3>
+                    <button onclick="clearCanvas()">Clear All</button>
+                    <button onclick="downloadImage()">Download PNG</button>
+                </div>
+            </div>
+            
+            <canvas id="drawingCanvas" width="600" height="400"></canvas>
+        </div>
+        
+        <div class="upload-section">
+            <h3>📤 Upload My Drawing</h3>
+            <div class="github-form">
+                <div class="form-group">
+                    <label for="studentName">Your Name:</label>
+                    <input type="text" id="studentName" placeholder="Enter your name">
+                    <div class="help-text">This will be part of your file name</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="drawingTitle">Drawing Title:</label>
+                    <input type="text" id="drawingTitle" placeholder="My awesome drawing">
+                    <div class="help-text">What did you draw?</div>
+                </div>
+            </div>
+            
+            <button onclick="uploadToGitHub()" style="width: 100%; font-size: 16px; padding: 15px;">
+                🎨 Save My Drawing!
+            </button>
+            
+            <div id="status" class="status"></div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('drawingCanvas');
+        const ctx = canvas.getContext('2d');
+        const brushSizeSlider = document.getElementById('brushSize');
+        const brushSizeDisplay = document.getElementById('brushSizeDisplay');
+        const colorPicker = document.getElementById('colorPicker');
+        
+        let isDrawing = false;
+        let currentColor = '#000000';
+        let currentBrushSize = 5;
+        
+        // Initialize canvas
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        
+        // Drawing functions
+        function startDrawing(e) {
+            isDrawing = true;
+            draw(e);
+        }
+        
+        function draw(e) {
+            if (!isDrawing) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            ctx.lineWidth = currentBrushSize;
+            ctx.strokeStyle = currentColor;
+            
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+        
+        function stopDrawing() {
+            if (isDrawing) {
+                isDrawing = false;
+                ctx.beginPath();
+            }
+        }
+        
+        // Event listeners
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+        
+        // Touch events for mobile
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousedown', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            canvas.dispatchEvent(mouseEvent);
+        });
+        
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousemove', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            canvas.dispatchEvent(mouseEvent);
+        });
+        
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            const mouseEvent = new MouseEvent('mouseup', {});
+            canvas.dispatchEvent(mouseEvent);
+        });
+        
+        // Tool controls
+        brushSizeSlider.addEventListener('input', (e) => {
+            currentBrushSize = e.target.value;
+            brushSizeDisplay.textContent = currentBrushSize + 'px';
+        });
+        
+        colorPicker.addEventListener('change', (e) => {
+            currentColor = e.target.value;
+            updateColorSelection(currentColor);
+        });
+        
+        // Color palette
+        document.querySelectorAll('.color-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentColor = btn.dataset.color;
+                colorPicker.value = currentColor;
+                updateColorSelection(currentColor);
+            });
+        });
+        
+        function updateColorSelection(color) {
+            document.querySelectorAll('.color-btn').forEach(btn => {
+                btn.classList.remove('selected');
+                if (btn.dataset.color === color) {
+                    btn.classList.add('selected');
+                }
+            });
+        }
+        
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+        
+        function downloadImage() {
+            const link = document.createElement('a');
+            link.download = 'my-drawing.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+        
+        // ⚠️ CONFIGURE THESE SETTINGS FOR YOUR CLASSROOM ⚠️
+        // Replace with your actual values before deploying
+        const GITHUB_CONFIG = {
+            token: '',  // Replace with your actual token
+            owner: '',      // Replace with your GitHub username
+            repo: ''       // Replace with your repository name
+        };
+        
+        async function uploadToGitHub() {
+            const studentName = document.getElementById('studentName').value.trim();
+            const drawingTitle = document.getElementById('drawingTitle').value.trim();
+            const statusDiv = document.getElementById('status');
+            
+            if (!studentName) {
+                showStatus('Please enter your name!', 'error');
+                return;
+            }
+            
+            if (!drawingTitle) {
+                showStatus('Please enter a title for your drawing!', 'error');
+                return;
+            }
+            
+            // Check if admin has configured the GitHub settings
+            if (GITHUB_CONFIG.token === 'YOUR_GITHUB_TOKEN_HERE' || 
+                GITHUB_CONFIG.owner === 'YOUR_USERNAME_HERE' || 
+                GITHUB_CONFIG.repo === 'YOUR_REPO_NAME_HERE') {
+                showStatus('⚠️ This app needs to be configured by your teacher first!', 'error');
+                return;
+            }
+            
+            try {
+                showStatus('Saving your drawing...', 'info');
+                
+                // Create a safe filename from student name and drawing title
+                const safeStudentName = studentName.replace(/[^a-zA-Z0-9]/g, '_');
+                const safeDrawingTitle = drawingTitle.replace(/[^a-zA-Z0-9]/g, '_');
+                const timestamp = new Date().toISOString().slice(0, 19).replace(/[:]/g, '-');
+                const fileName = `drawings/${safeStudentName}_${safeDrawingTitle}_${timestamp}.png`;
+                
+                // Convert canvas to base64
+                const imageData = canvas.toDataURL('image/png').split(',')[1];
+                
+                // Create commit message
+                const commitMessage = `Add drawing "${drawingTitle}" by ${studentName}`;
+                
+                // GitHub API request
+                const response = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${fileName}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${GITHUB_CONFIG.token}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: commitMessage,
+                        content: imageData
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    showStatus(`🎉 Your drawing has been saved successfully! Great job, ${studentName}!`, 'success');
+                    
+                    // Clear the form for next drawing
+                    setTimeout(() => {
+                        document.getElementById('studentName').value = '';
+                        document.getElementById('drawingTitle').value = '';
+                        clearCanvas();
+                    }, 2000);
+                } else {
+                    const error = await response.json();
+                    showStatus(`Oops! Something went wrong: ${error.message}`, 'error');
+                }
+                
+            } catch (error) {
+                showStatus(`Sorry, there was a problem saving your drawing. Please try again!`, 'error');
+                console.error('Upload error:', error);
+            }
+        }
+        
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+            statusDiv.style.display = 'block';
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+    </script>
+</body>
+</html>
